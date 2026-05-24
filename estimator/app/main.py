@@ -45,8 +45,8 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(
-    title="Software Estimation CAG Service",
-    description="AI-powered software estimation service using Cache Augmented Generation architecture",
+    title="Software Estimation Service",
+    description="AI-powered software estimation service with typed input and versioned prompts",
     version="0.1.0",
     docs_url="/docs",
     redoc_url="/redoc",

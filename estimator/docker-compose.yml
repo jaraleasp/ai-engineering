@@ -12,10 +12,21 @@ services:
     env_file:
       - .env
 
+    # Override REDIS_URL for the in-network Redis service. The .env value
+    # (redis://localhost:6379) is meant for running uvicorn outside Docker.
+    environment:
+      REDIS_URL: redis://redis:6379
+
+    depends_on:
+      redis:
+        condition: service_healthy
+
     # Bind-mount the app/ directory so code changes are reflected immediately
-    # inside the container without rebuilding the image.
+    # inside the container without rebuilding the image. Tests too, so we can
+    # run `pytest` against the live container during development.
     volumes:
       - ./app:/app/app
+      - ./tests:/app/tests
 
     # Override the default CMD to enable auto-reload on file changes.
     # Remove --reload for production deployments.
@@ -30,3 +41,24 @@ services:
       timeout: 5s
       start_period: 10s
       retries: 3
+
+  redis:
+    # Redis Stack bundles the RediSearch + RedisJSON modules that redisvl uses
+    # to do vector similarity queries for the semantic cache. The vanilla
+    # ``redis:7-alpine`` image does NOT ship these modules.
+    image: redis/redis-stack:7.4.0-v0
+    container_name: estimator-redis
+    ports:
+      - "6379:6379"
+      - "8001:8001"  # RedisInsight UI (handy during the live demo)
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    restart: unless-stopped
+
+volumes:
+  redis_data:

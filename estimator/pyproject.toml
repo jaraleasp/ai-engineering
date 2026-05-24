@@ -1,7 +1,7 @@
 [project]
 name = "estimator"
 version = "0.1.0"
-description = "AI-powered software estimation service using Cache Augmented Generation architecture"
+description = "AI-powered software estimation service with typed input and versioned Jinja2 prompts"
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
@@ -13,6 +13,13 @@ dependencies = [
     "anthropic>=0.40",
     "python-dotenv>=1.0",
     "structlog>=24.0",
+    "litellm>=1.50",
+    "instructor>=1.5",
+    "redis>=5.0",
+    "redisvl>=0.3",
+    "streamlit>=1.40",
+    "httpx>=0.27",
+    "jinja2>=3.1",
 ]
 
 [dependency-groups]
@@ -21,6 +28,7 @@ dev = [
     "pytest-asyncio>=0.23",
     "httpx>=0.27",
     "ruff>=0.5",
+    "fakeredis>=2.20",
 ]
 
 [tool.ruff]

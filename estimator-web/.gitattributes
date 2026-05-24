@@ -1,0 +1,14 @@
+# See https://git-scm.com/docs/gitattributes for more about git attribute files.
+
+# Mark the database schema as having been generated.
+db/schema.rb linguist-generated
+
+# Mark any vendored files as having been vendored.
+vendor/* linguist-vendored
+config/credentials/*.yml.enc diff=rails_credentials
+config/credentials.yml.enc diff=rails_credentials
+
+# Force LF line endings for scripts that run inside Linux containers.
+# Without this, Windows git checks them out as CRLF and the shebang breaks.
+bin/* text eol=lf
+Procfile.dev text eol=lf
