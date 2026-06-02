@@ -51,6 +51,36 @@ Respuesta:
 }
 ```
 
+### Comparar similitud entre dos textos (CLI)
+
+Script: `scripts/compare.py`.
+
+Dentro del contenedor (servicio IA de este repo: `estimator`):
+
+```bash
+cd estimator
+docker compose exec estimator python scripts/compare.py \
+  --text-a "OAuth 2.0 authentication backend for fintech" \
+  --text-b "JWT-based authorization service for banking app"
+```
+
+Fuera del contenedor (con `.env` cargado por `Settings`):
+
+```bash
+cd estimator
+uv run python scripts/compare.py \
+  --text-a "OAuth 2.0 authentication backend for fintech" \
+  --text-b "JWT-based authorization service for banking app"
+```
+
+Salida ejemplo:
+
+```text
+Text A: OAuth 2.0 authentication backend for fintech
+Text B: JWT-based authorization service for banking app
+Cosine similarity: 0.8421
+```
+
 ### Cliente Streamlit
 
 El cliente Streamlit es un formulario que construye el JSON y muestra el `text` recibido. Corre fuera de Docker y consume la API por HTTP:

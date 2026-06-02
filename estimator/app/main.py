@@ -5,6 +5,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.config import get_settings
+from app.embedding_pipeline import router as embedding_router
 from app.routers import estimations, ingestion, sessions
 
 
@@ -78,6 +79,7 @@ app.add_middleware(
 app.include_router(estimations.router)
 app.include_router(sessions.router)
 app.include_router(ingestion.router)
+app.include_router(embedding_router.router)
 
 
 @app.get("/health")

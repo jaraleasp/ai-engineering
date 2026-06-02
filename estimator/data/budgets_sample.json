@@ -1,0 +1,473 @@
+[
+    {
+        "budget_id": "BUD-2024-014",
+        "client_metadata": {
+            "name": "FintechCorp",
+            "sector": "finance",
+            "country": "ES"
+        },
+        "project_summary": "Mobile banking API with OAuth 2.0 authentication and PSD2 compliance",
+        "main_technology": "ruby_on_rails",
+        "year": 2024,
+        "total_estimated_hours": 480,
+        "components": [
+            {
+                "component_id": "AUTH-001",
+                "name": "OAuth 2.0 authentication backend",
+                "description": "Implementation of OAuth 2.0 flows (authorization code, refresh token) with JWT-based session management, multi-tenant token isolation, and rate limiting per client.",
+                "tech_stack": ["ruby_on_rails", "postgresql", "redis"],
+                "estimated_hours": 120,
+                "complexity": "high",
+                "dependencies": []
+            }
+        ]
+    },
+    {
+        "budget_id": "BUD-2024-015",
+        "client_metadata": {
+            "name": "HealthSync Labs",
+            "sector": "healthcare",
+            "country": "ES"
+        },
+        "project_summary": "Patient appointment portal with electronic prescription reminders and clinician dashboard",
+        "main_technology": "django",
+        "year": 2024,
+        "total_estimated_hours": 520,
+        "components": [
+            {
+                "component_id": "PORTAL-001",
+                "name": "Patient self-service portal",
+                "description": "Development of a secure web portal for appointment booking, prescription reminder management, and patient profile updates with multilingual support.",
+                "tech_stack": ["django", "postgresql", "htmx"],
+                "estimated_hours": 150,
+                "complexity": "high",
+                "dependencies": []
+            },
+            {
+                "component_id": "DASH-002",
+                "name": "Clinician scheduling dashboard",
+                "description": "Creation of an internal dashboard for doctors and nurses to manage visit calendars, availability slots, and reminder delivery status.",
+                "tech_stack": ["django", "postgresql", "stimulus"],
+                "estimated_hours": 110,
+                "complexity": "medium",
+                "dependencies": ["PORTAL-001"]
+            }
+        ]
+    },
+    {
+        "budget_id": "BUD-2024-016",
+        "client_metadata": {
+            "name": "RetailNova",
+            "sector": "retail",
+            "country": "PT"
+        },
+        "project_summary": "Inventory synchronization platform for physical stores and ecommerce channels",
+        "main_technology": "nodejs",
+        "year": 2024,
+        "total_estimated_hours": 430,
+        "components": [
+            {
+                "component_id": "SYNC-001",
+                "name": "Stock synchronization service",
+                "description": "Implementation of a service that reconciles inventory deltas across point-of-sale systems, ecommerce APIs, and warehouse feeds every few minutes.",
+                "tech_stack": ["nodejs", "postgresql", "redis"],
+                "estimated_hours": 140,
+                "complexity": "high",
+                "dependencies": []
+            },
+            {
+                "component_id": "ALERT-002",
+                "name": "Low-stock alert engine",
+                "description": "Configuration of rule-based alerts for low-stock thresholds, restock recommendations, and escalation messages to store managers.",
+                "tech_stack": ["nodejs", "bullmq", "redis"],
+                "estimated_hours": 70,
+                "complexity": "medium",
+                "dependencies": ["SYNC-001"]
+            }
+        ]
+    },
+    {
+        "budget_id": "BUD-2024-017",
+        "client_metadata": {
+            "name": "EduPath",
+            "sector": "education",
+            "country": "MX"
+        },
+        "project_summary": "Learning analytics dashboard for online bootcamps with cohort progression tracking",
+        "main_technology": "python",
+        "year": 2024,
+        "total_estimated_hours": 390,
+        "components": [
+            {
+                "component_id": "ANLT-001",
+                "name": "Cohort analytics pipeline",
+                "description": "Design of ingestion and aggregation jobs to compute lesson completion, quiz performance, and dropout risk metrics for each cohort.",
+                "tech_stack": ["python", "postgresql", "dbt"],
+                "estimated_hours": 130,
+                "complexity": "high",
+                "dependencies": []
+            },
+            {
+                "component_id": "UI-002",
+                "name": "Instructor insights dashboard",
+                "description": "Development of a dashboard showing cohort health, assignment bottlenecks, and student intervention recommendations.",
+                "tech_stack": ["react", "typescript", "recharts"],
+                "estimated_hours": 95,
+                "complexity": "medium",
+                "dependencies": ["ANLT-001"]
+            }
+        ]
+    },
+    {
+        "budget_id": "BUD-2024-018",
+        "client_metadata": {
+            "name": "LogistiWave",
+            "sector": "logistics",
+            "country": "ES"
+        },
+        "project_summary": "Fleet monitoring platform with route deviations and cold-chain incident alerts",
+        "main_technology": "java",
+        "year": 2024,
+        "total_estimated_hours": 610,
+        "components": [
+            {
+                "component_id": "TRACK-001",
+                "name": "Vehicle telemetry ingestion",
+                "description": "Implementation of ingestion endpoints for GPS, temperature, and sensor events coming from the fleet devices with validation and replay protection.",
+                "tech_stack": ["java", "spring_boot", "kafka"],
+                "estimated_hours": 180,
+                "complexity": "high",
+                "dependencies": []
+            },
+            {
+                "component_id": "ALERT-002",
+                "name": "Incident alerting workflow",
+                "description": "Creation of workflows to detect route deviations, temperature breaches, and driver inactivity, then notify operations teams in real time.",
+                "tech_stack": ["java", "spring_boot", "postgresql"],
+                "estimated_hours": 120,
+                "complexity": "high",
+                "dependencies": ["TRACK-001"]
+            }
+        ]
+    },
+    {
+        "budget_id": "BUD-2024-019",
+        "client_metadata": {
+            "name": "GreenGrid Energy",
+            "sector": "energy",
+            "country": "CL"
+        },
+        "project_summary": "Monitoring console for solar plant production and inverter anomalies",
+        "main_technology": "dotnet",
+        "year": 2024,
+        "total_estimated_hours": 455,
+        "components": [
+            {
+                "component_id": "SCADA-001",
+                "name": "Production data collector",
+                "description": "Development of a collector that ingests production metrics from inverter gateways and normalizes them into a timeseries-friendly schema.",
+                "tech_stack": ["dotnet", "sqlserver", "azure_functions"],
+                "estimated_hours": 125,
+                "complexity": "high",
+                "dependencies": []
+            },
+            {
+                "component_id": "OPS-002",
+                "name": "Operations monitoring console",
+                "description": "Implementation of a console showing real-time production, inverter status, anomaly flags, and maintenance work orders for plant operators.",
+                "tech_stack": ["dotnet", "blazor", "sqlserver"],
+                "estimated_hours": 105,
+                "complexity": "medium",
+                "dependencies": ["SCADA-001"]
+            }
+        ]
+    },
+    {
+        "budget_id": "BUD-2024-020",
+        "client_metadata": {
+            "name": "TravelNest",
+            "sector": "travel",
+            "country": "IT"
+        },
+        "project_summary": "Dynamic packaging engine for hotel and activity bundles",
+        "main_technology": "php",
+        "year": 2024,
+        "total_estimated_hours": 500,
+        "components": [
+            {
+                "component_id": "PACK-001",
+                "name": "Bundle pricing engine",
+                "description": "Creation of pricing rules to assemble hotel, transfer, and activity bundles with seasonal adjustments, margins, and blackout dates.",
+                "tech_stack": ["php", "laravel", "mysql"],
+                "estimated_hours": 150,
+                "complexity": "high",
+                "dependencies": []
+            },
+            {
+                "component_id": "BOOK-002",
+                "name": "Supplier booking connector",
+                "description": "Development of connectors to supplier APIs for availability checks, provisional reservations, and booking confirmations.",
+                "tech_stack": ["php", "laravel", "redis"],
+                "estimated_hours": 130,
+                "complexity": "high",
+                "dependencies": ["PACK-001"]
+            }
+        ]
+    },
+    {
+        "budget_id": "BUD-2024-021",
+        "client_metadata": {
+            "name": "AgroMetric",
+            "sector": "agriculture",
+            "country": "AR"
+        },
+        "project_summary": "Crop field inspection app with offline sync and issue geotagging",
+        "main_technology": "flutter",
+        "year": 2024,
+        "total_estimated_hours": 470,
+        "components": [
+            {
+                "component_id": "MOB-001",
+                "name": "Offline field inspection mobile app",
+                "description": "Development of a mobile app for agronomists to capture field inspections, photos, notes, and issue severity while working offline.",
+                "tech_stack": ["flutter", "sqlite", "firebase"],
+                "estimated_hours": 160,
+                "complexity": "high",
+                "dependencies": []
+            },
+            {
+                "component_id": "SYNC-002",
+                "name": "Deferred synchronization service",
+                "description": "Implementation of background synchronization for inspection records, attachments, and conflict resolution once connectivity is restored.",
+                "tech_stack": ["flutter", "firebase", "cloud_functions"],
+                "estimated_hours": 90,
+                "complexity": "medium",
+                "dependencies": ["MOB-001"]
+            }
+        ]
+    },
+    {
+        "budget_id": "BUD-2024-022",
+        "client_metadata": {
+            "name": "InsureFlow",
+            "sector": "insurance",
+            "country": "ES"
+        },
+        "project_summary": "Claims intake workflow with document classification and adjuster assignment",
+        "main_technology": "typescript",
+        "year": 2024,
+        "total_estimated_hours": 560,
+        "components": [
+            {
+                "component_id": "CLAIM-001",
+                "name": "Claims intake API",
+                "description": "Development of APIs to register claims, capture policy references, attach evidence, and validate mandatory intake fields.",
+                "tech_stack": ["typescript", "nestjs", "postgresql"],
+                "estimated_hours": 145,
+                "complexity": "high",
+                "dependencies": []
+            },
+            {
+                "component_id": "CLASS-002",
+                "name": "Document classification workflow",
+                "description": "Implementation of a workflow to classify uploaded claim documents, route them to the right queue, and assign adjusters by policy type.",
+                "tech_stack": ["typescript", "nestjs", "rabbitmq"],
+                "estimated_hours": 135,
+                "complexity": "high",
+                "dependencies": ["CLAIM-001"]
+            }
+        ]
+    },
+    {
+        "budget_id": "BUD-2024-023",
+        "client_metadata": {
+            "name": "BuildScope",
+            "sector": "construction",
+            "country": "CO"
+        },
+        "project_summary": "Subcontractor management portal with milestone approvals and retention tracking",
+        "main_technology": "rails",
+        "year": 2024,
+        "total_estimated_hours": 420,
+        "components": [
+            {
+                "component_id": "VEND-001",
+                "name": "Subcontractor onboarding module",
+                "description": "Creation of onboarding flows for subcontractor profiles, compliance documents, banking details, and qualification status.",
+                "tech_stack": ["rails", "postgresql", "sidekiq"],
+                "estimated_hours": 110,
+                "complexity": "medium",
+                "dependencies": []
+            },
+            {
+                "component_id": "MILE-002",
+                "name": "Milestone approval workflow",
+                "description": "Implementation of approval steps for work milestones, retention percentages, and payment release conditions for project managers.",
+                "tech_stack": ["rails", "postgresql", "redis"],
+                "estimated_hours": 95,
+                "complexity": "medium",
+                "dependencies": ["VEND-001"]
+            }
+        ]
+    },
+    {
+        "budget_id": "BUD-2024-024",
+        "client_metadata": {
+            "name": "MediaPulse",
+            "sector": "media",
+            "country": "US"
+        },
+        "project_summary": "Ad inventory forecasting platform for digital publications",
+        "main_technology": "go",
+        "year": 2024,
+        "total_estimated_hours": 495,
+        "components": [
+            {
+                "component_id": "FORE-001",
+                "name": "Forecasting service",
+                "description": "Development of a service that estimates ad inventory availability by section, seasonality, campaign type, and historical fill rate.",
+                "tech_stack": ["go", "clickhouse", "grpc"],
+                "estimated_hours": 155,
+                "complexity": "high",
+                "dependencies": []
+            },
+            {
+                "component_id": "SALE-002",
+                "name": "Sales planning interface",
+                "description": "Implementation of an interface for sales teams to explore forecast scenarios and reserve inventory blocks for priority advertisers.",
+                "tech_stack": ["react", "typescript", "graphql"],
+                "estimated_hours": 90,
+                "complexity": "medium",
+                "dependencies": ["FORE-001"]
+            }
+        ]
+    },
+    {
+        "budget_id": "BUD-2024-025",
+        "client_metadata": {
+            "name": "PropVista",
+            "sector": "real_estate",
+            "country": "ES"
+        },
+        "project_summary": "Lead qualification CRM for real estate developments with broker scoring",
+        "main_technology": "salesforce",
+        "year": 2024,
+        "total_estimated_hours": 350,
+        "components": [
+            {
+                "component_id": "LEAD-001",
+                "name": "Lead intake and scoring flow",
+                "description": "Configuration of lead capture flows, broker attribution rules, and scoring based on property interest, budget, and engagement signals.",
+                "tech_stack": ["salesforce", "apex", "marketing_cloud"],
+                "estimated_hours": 115,
+                "complexity": "medium",
+                "dependencies": []
+            },
+            {
+                "component_id": "PIPE-002",
+                "name": "Broker pipeline dashboard",
+                "description": "Development of dashboards showing pipeline stages, conversion performance, and broker-level opportunity aging.",
+                "tech_stack": ["salesforce", "tableau", "apex"],
+                "estimated_hours": 80,
+                "complexity": "medium",
+                "dependencies": ["LEAD-001"]
+            }
+        ]
+    },
+    {
+        "budget_id": "BUD-2024-026",
+        "client_metadata": {
+            "name": "CivicLoop",
+            "sector": "public_sector",
+            "country": "FR"
+        },
+        "project_summary": "Citizen incident reporting portal with SLA monitoring for municipal services",
+        "main_technology": "java",
+        "year": 2024,
+        "total_estimated_hours": 575,
+        "components": [
+            {
+                "component_id": "CASE-001",
+                "name": "Citizen incident reporting portal",
+                "description": "Development of a responsive portal for reporting street incidents, uploading evidence, geolocating issues, and tracking resolution status.",
+                "tech_stack": ["java", "spring_boot", "postgresql"],
+                "estimated_hours": 165,
+                "complexity": "high",
+                "dependencies": []
+            },
+            {
+                "component_id": "SLA-002",
+                "name": "Municipal SLA monitoring dashboard",
+                "description": "Implementation of dashboards and alerts to monitor service-level agreements, unresolved cases, and assignment workload by department.",
+                "tech_stack": ["java", "spring_boot", "grafana"],
+                "estimated_hours": 125,
+                "complexity": "high",
+                "dependencies": ["CASE-001"]
+            }
+        ]
+    },
+    {
+        "budget_id": "BUD-2024-027",
+        "client_metadata": {
+            "name": "FoodChain Ops",
+            "sector": "food_service",
+            "country": "BR"
+        },
+        "project_summary": "Kitchen production planner with ingredient forecasting and waste tracking",
+        "main_technology": "python",
+        "year": 2024,
+        "total_estimated_hours": 405,
+        "components": [
+            {
+                "component_id": "PLAN-001",
+                "name": "Production planning engine",
+                "description": "Implementation of a planning engine that translates forecasted demand into daily kitchen production targets and prep schedules.",
+                "tech_stack": ["python", "fastapi", "postgresql"],
+                "estimated_hours": 120,
+                "complexity": "medium",
+                "dependencies": []
+            },
+            {
+                "component_id": "WASTE-002",
+                "name": "Waste and yield tracking module",
+                "description": "Creation of a module to log waste events, compare actual yields versus targets, and highlight recurring ingredient loss patterns.",
+                "tech_stack": ["python", "fastapi", "metabase"],
+                "estimated_hours": 85,
+                "complexity": "medium",
+                "dependencies": ["PLAN-001"]
+            }
+        ]
+    },
+    {
+        "budget_id": "BUD-2024-028",
+        "client_metadata": {
+            "name": "SecureOps",
+            "sector": "cybersecurity",
+            "country": "DE"
+        },
+        "project_summary": "Privileged access review workflow with quarterly certification campaigns",
+        "main_technology": "dotnet",
+        "year": 2024,
+        "total_estimated_hours": 540,
+        "components": [
+            {
+                "component_id": "REVW-001",
+                "name": "Access review campaign manager",
+                "description": "Development of workflows to launch certification campaigns, assign reviewers, and collect approval or revocation decisions with audit logs.",
+                "tech_stack": ["dotnet", "sqlserver", "azure_ad"],
+                "estimated_hours": 155,
+                "complexity": "high",
+                "dependencies": []
+            },
+            {
+                "component_id": "AUDT-002",
+                "name": "Certification audit reporting",
+                "description": "Implementation of reports showing review completion, overdue access decisions, and compliance evidence for internal audits.",
+                "tech_stack": ["dotnet", "powerbi", "sqlserver"],
+                "estimated_hours": 105,
+                "complexity": "medium",
+                "dependencies": ["REVW-001"]
+            }
+        ]
+    }
+]

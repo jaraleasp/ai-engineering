@@ -84,6 +84,18 @@ class Settings(BaseSettings):
     # HMAC salt. Stored in env so it can be rotated independently of the code.
     PSEUDONYM_HASH_SALT: str = "change-me-in-prod"
 
+    # --- Session 7 fields (embedding pipeline: chunking + batch embeddings) ---
+    # Batch size for OpenAI embeddings.create(input=[...]). Keep it high enough
+    # to avoid one-call-per-chunk overhead while staying under provider limits.
+    EMBEDDING_BATCH_SIZE: int = 100
+    # Max retries for RateLimitError with exponential backoff.
+    EMBEDDING_MAX_RETRIES: int = 3
+    # Backoff schedule in seconds for embedding rate limits.
+    EMBEDDING_RATE_LIMIT_BACKOFF_SECONDS: tuple[int, int, int] = (1, 2, 4)
+    # OpenAI text-embedding-3-small price (USD) per 1M input tokens.
+    # This changes over time; keep it explicit and easy to update.
+    EMBEDDING_COST_PER_1M_TOKENS_USD: float = 0.02
+
     @model_validator(mode="after")
     def validate_at_least_one_api_key(self) -> "Settings":
         """LiteLLM may try either provider via fallback, so we require at least one key."""

@@ -37,6 +37,7 @@ dependencies = [
     "spacy>=3.7",
     "faker>=24.0",
     "unstructured[all-docs]>=0.14",
+    "tiktoken>=0.7",
 ]
 
 [dependency-groups]
