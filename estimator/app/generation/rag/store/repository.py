@@ -8,11 +8,12 @@ everything back and leaves no orphan ``documents`` row.
 
 from __future__ import annotations
 
-from sqlalchemy import Row, select
+from pgvector.sqlalchemy import HALFVEC
+from sqlalchemy import Row, cast, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.generation.rag.schemas import EmbeddedChunk
-from app.generation.rag.store.models import ChunkRow, DocumentRow
+from app.generation.rag.store.models import ChunkRow, DocumentRow, EMBEDDING_DIMENSIONS
 
 # The structural chunker emits one chunk per budget component; the vocabulary
 # is queryable thanks to the index on ``chunk_type`` (live-session filters).
@@ -70,7 +71,8 @@ class ChunkStore:
         HNSW index the live session adds — operator/index mismatch makes
         Postgres silently ignore the index.
         """
-        distance = ChunkRow.embedding.cosine_distance(query_vector)
+        # distance = ChunkRow.embedding.cosine_distance(query_vector)
+        distance = cast(ChunkRow.embedding, HALFVEC(EMBEDDING_DIMENSIONS)).cosine_distance(query_vector)
         stmt = (
             select(
                 ChunkRow.id,

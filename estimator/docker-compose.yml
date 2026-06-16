@@ -76,15 +76,27 @@ services:
   # duplicate resource names across included files).
   estimator-postgres:
     # pgvector/pgvector:pg16 ships the pgvector extension already compiled.
-    # In Session 6 we do NOT activate it (no ``CREATE EXTENSION vector``);
-    # Session 7 will run a follow-up migration that turns it on. Using this
-    # image now avoids recreating the container later.
+    # The Session 8 migration activates it (CREATE EXTENSION vector).
     image: pgvector/pgvector:pg16
     container_name: estimator-postgres
     environment:
       POSTGRES_USER: estimator
       POSTGRES_PASSWORD: estimator
       POSTGRES_DB: estimator
+    # Session 8 live: tuning for HNSW index builds. Parallel builds use shared
+    # memory, hence shm_size. The -c values are conservative so they work on
+    # any reasonable dev machine; in real production they scale with the RAM
+    # of the host (rule of thumb: shared_buffers ~25% of RAM,
+    # effective_cache_size ~75%, maintenance_work_mem as much as one index
+    # build needs without starving the rest).
+    shm_size: 1gb
+    command: >
+      postgres
+      -c shared_buffers=512MB
+      -c effective_cache_size=1536MB
+      -c work_mem=64MB
+      -c maintenance_work_mem=512MB
+      -c max_parallel_maintenance_workers=2
     ports:
       # Port 5433 on the host to avoid colliding with the estimator-web
       # Postgres (5432). Inside the network we still talk on 5432.
