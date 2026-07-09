@@ -7,12 +7,14 @@ the OpenAI Responses API so every decision is visible and captured in a trace.
 The loop (``EstimationAgent.run``):
 
 1. Call ``responses.create`` with the system prompt, the transcript as input, and
-   the two tool schemas.
+   the tool schemas.
 2. Scan ``response.output`` for ``function_call`` items. For each, run the tool and
    build a ``function_call_output`` carrying the SAME ``call_id``.
 3. Chain the next turn with ``previous_response_id`` and the tool outputs.
 4. Repeat while the model keeps calling tools; stop when it returns a final message
    (natural exit) or when ``max_iterations`` is hit (safeguard against a runaway).
+5. One final ``responses.parse`` turns the accumulated context into a validated
+   ``AgentEstimate`` (the structured deliverable).
 
 We drive the chaining ourselves instead of delegating to the API's built-in
 agentic behaviour — that is the only way to capture each reasoning → action →
@@ -28,7 +30,7 @@ from typing import Any
 
 import structlog
 
-from app.generation.agentic.agent_schemas import AGENT_TOOLS
+from app.generation.agentic.agent_schemas import AGENT_TOOLS, AgentEstimate
 from app.generation.agentic.agent_tools import BudgetRetriever, execute_tool
 
 log = structlog.get_logger()
@@ -55,11 +57,24 @@ items that clearly belong to a different kind of work, even if they matched.
 4. Once you have references for every component, call `calculate_estimate` with \
 the components and the reference amounts you gathered. Pass an empty list of \
 references for a component you could not find — do not invent numbers.
-5. Produce a final structured estimate: per-component hours, the total, the \
-historical sources you relied on, your assumptions, and a confidence level.
+5. Call `validate_estimate` as the LAST tool step and fix anything it flags \
+(e.g. search again for an unbudgeted component) before finishing.
+6. When the estimate passes validation, stop calling tools. You will then be \
+asked to return the final structured estimate.
 
-You have exactly two tools: `search_budgets` and `calculate_estimate`. Think step \
-by step and act deliberately; stop once the estimate is complete."""
+You have exactly three tools: `search_budgets`, `calculate_estimate` and \
+`validate_estimate`. Ground your numbers in what `search_budgets` returns; record \
+anything the transcript did not specify as an assumption."""
+
+
+# Sent as the final user turn (after the tool loop) to elicit the structured
+# estimate via ``responses.parse``. Kept separate from the loop instructions.
+FINAL_INSTRUCTION = (
+    "Return the final structured estimate now, consolidating the components you "
+    "costed. Set total_hours to the sum of the components, cite the historical "
+    "source ids you relied on per component, list your assumptions, and choose a "
+    "confidence level reflecting how well the historical budgets matched the work."
+)
 
 
 @dataclass
@@ -77,11 +92,10 @@ class TraceStep:
 class AgentResult:
     """The agent's final output: the structured estimate plus its full trace."""
 
-    estimate: dict[str, Any] | None
-    summary: str
+    estimate: AgentEstimate | None
     trace: list[TraceStep] = field(default_factory=list)
     iterations: int = 0
-    stopped: str = "completed"  # "completed" | "max_iterations"
+    stopped: str = "completed"  # "completed" | "max_iterations" | "no_final_estimate"
 
 
 def _reasoning_summary(output: list[Any]) -> str:
@@ -127,8 +141,12 @@ class EstimationAgent:
         self._max_iterations = max_iterations
 
     async def _create(self, **kwargs: Any) -> Any:
-        """Call the (blocking) Responses API off the event loop."""
+        """Call the (blocking) Responses ``create`` off the event loop."""
         return await asyncio.to_thread(self._client.responses.create, **kwargs)
+
+    async def _parse(self, **kwargs: Any) -> Any:
+        """Call the (blocking) Responses ``parse`` off the event loop."""
+        return await asyncio.to_thread(self._client.responses.parse, **kwargs)
 
     async def run(self, transcript: str) -> AgentResult:
         """Run the agent to completion and return the estimate plus the trace."""
@@ -138,10 +156,10 @@ class EstimationAgent:
             input=transcript,
             tools=AGENT_TOOLS,
             reasoning={"effort": self._reasoning_effort, "summary": "auto"},
+            store=True,
         )
 
         trace: list[TraceStep] = []
-        last_estimate: dict[str, Any] | None = None
         turns = 0
         stopped = "completed"
 
@@ -161,8 +179,6 @@ class EstimationAgent:
             for position, call in enumerate(calls):
                 args = _parse_arguments(call.arguments)
                 result, observation = await self._run_one_call(call, args)
-                if call.name == "calculate_estimate" and isinstance(result, dict):
-                    last_estimate = result
                 # First call of the turn owns the turn's reasoning; the rest are
                 # parallel calls issued in the same turn.
                 step_reasoning = reasoning if position == 0 else "(parallel tool call in same turn)"
@@ -189,16 +205,49 @@ class EstimationAgent:
                 input=tool_outputs,
                 tools=AGENT_TOOLS,
                 reasoning={"effort": self._reasoning_effort, "summary": "auto"},
+                store=True,
             )
 
-        log.info("agent_done", iterations=turns, stopped=stopped, trace_steps=len(trace))
+        # One terminal parse turns the accumulated context into the structured
+        # deliverable — skipped if we bailed out at the iteration ceiling.
+        estimate: AgentEstimate | None = None
+        if stopped != "max_iterations":
+            estimate, stopped = await self._finalize(response.id, stopped)
+
+        log.info(
+            "agent_done",
+            iterations=turns,
+            stopped=stopped,
+            trace_steps=len(trace),
+            total_hours=(estimate.total_hours if estimate else None),
+        )
         return AgentResult(
-            estimate=last_estimate,
-            summary=(response.output_text or "").strip(),
+            estimate=estimate,
             trace=trace,
             iterations=turns,
             stopped=stopped,
         )
+
+    async def _finalize(
+        self, previous_response_id: str, stopped: str
+    ) -> tuple[AgentEstimate | None, str]:
+        """Elicit the final structured estimate via ``responses.parse``.
+
+        Returns ``(estimate, stopped_reason)``. A parse failure is a stop reason
+        (``no_final_estimate``), not a crash — the trace is still returned.
+        """
+        try:
+            parsed = await self._parse(
+                model=self._model,
+                previous_response_id=previous_response_id,
+                input=[{"role": "user", "content": FINAL_INSTRUCTION}],
+                text_format=AgentEstimate,
+                store=True,
+            )
+            return parsed.output_parsed, stopped
+        except Exception as exc:  # noqa: BLE001 — a failed final parse is a stop reason.
+            log.error("agent_final_parse_failed", error=str(exc)[:300])
+            return None, "no_final_estimate"
 
     async def _run_one_call(self, call: Any, args: Any) -> tuple[Any, str]:
         """Execute a single function_call, returning (result_for_model, observation).
@@ -256,16 +305,20 @@ def render_trace(result: AgentResult) -> str:
     ]
     estimate = result.estimate
     if estimate:
-        for component in estimate.get("components", []):
-            flag = "  [UNBUDGETED]" if component.get("unbudgeted") else ""
-            lines.append(
-                f"  - {component['name']}: {component['estimated_hours']}h"
-                f" (refs={component['reference_count']}){flag}"
+        for component in estimate.components:
+            cites = (
+                f"  [sources: {', '.join(map(str, component.cited_source_ids))}]"
+                if component.cited_source_ids
+                else ""
             )
-        lines.append(f"\n  TOTAL: {estimate.get('total_hours')}h")
+            lines.append(f"  - {component.name}: {component.estimated_hours}h{cites}")
+            if component.rationale:
+                lines.append(f"      {component.rationale}")
+        lines.append(f"\n  TOTAL: {estimate.total_hours}h    confidence: {estimate.confidence}")
+        if estimate.assumptions:
+            lines.append("  assumptions:")
+            lines += [f"    · {assumption}" for assumption in estimate.assumptions]
     else:
-        lines.append("  (the agent produced no calculate_estimate result)")
+        lines.append("  (the agent produced no final structured estimate)")
 
-    if result.summary:
-        lines += ["", "SUMMARY:", result.summary]
     return "\n".join(lines)

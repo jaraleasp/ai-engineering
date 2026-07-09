@@ -1,9 +1,10 @@
 # Sesión 12 — Agente de estimación (a mano, sin framework)
 
 Entregable de la pre-work de la Sesión 12: un agente que recibe una transcripción,
-la descompone en componentes, usa dos tools (`search_budgets`, `calculate_estimate`)
-en un **bucle manual** (razona → actúa → observa → repite) sobre la **Responses API**
-de OpenAI, y devuelve una estimación estructurada + una traza de su razonamiento.
+la descompone en componentes, usa tres tools (`search_budgets`, `calculate_estimate`,
+`validate_estimate`) en un **bucle manual** (razona → actúa → observa → repite) sobre
+la **Responses API** de OpenAI, y devuelve una **estimación estructurada**
+(`AgentEstimate`, vía `responses.parse`) + una traza de su razonamiento.
 
 ## Cómo ejecutar
 
@@ -19,15 +20,15 @@ uv run python scripts/run_agent_s12.py exercises/session-12/sample_transcript_co
 uv run python scripts/run_agent_s12.py exercises/session-12/sample_transcript_complex.txt --stub --model gpt-5-mini
 ```
 
-Tests (sin API, todo con fakes): `uv run pytest tests/generation/agentic/ -v` → **10 passing**.
+Tests (sin API, todo con fakes): `uv run pytest tests/generation/agentic/ -v` → **14 passing**.
 
 ## Qué se construyó
 
 | Pieza | Fichero |
 | --- | --- |
-| Schemas de las 2 tools (Responses API, formato plano, `strict: true`) | `app/generation/agentic/agent_schemas.py` |
-| Tools: `calculate_estimate` (determinista) + `search_budgets` (envuelve el retrieval) | `app/generation/agentic/agent_tools.py` |
-| Bucle manual + captura de traza + `render_trace` | `app/generation/agentic/agent_loop.py` |
+| Schemas de las 3 tools (Responses API, formato plano, `strict: true`) + `AgentEstimate` | `app/generation/agentic/agent_schemas.py` |
+| Tools: `calculate_estimate` + `validate_estimate` (deterministas) + `search_budgets` (envuelve el retrieval) | `app/generation/agentic/agent_tools.py` |
+| Bucle manual + `responses.parse` final + captura de traza + `render_trace` | `app/generation/agentic/agent_loop.py` |
 | Wiring (retriever real inyectado) + config | `app/dependencies.py`, `app/config.py` |
 | Runner CLI (`--stub`, `--model`) | `scripts/run_agent_s12.py` |
 | Traza real de `gpt-5` sobre la transcripción compleja | `exercises/session-12/trace_complex_gpt5.txt` |
@@ -37,16 +38,17 @@ Tests (sin API, todo con fakes): `uv run pytest tests/generation/agentic/ -v` �
 | Criterio | Resultado |
 | --- | --- |
 | Identifica >1 componente y hace >1 `search_budgets` | ✅ 4 componentes, **5 llamadas** a `search_budgets` |
-| Llama a `calculate_estimate` | ✅ 1 llamada, `TOTAL: 3651.3h` |
-| Termina por sí solo | ✅ `iterations=3, stopped=completed` |
-| Estimación estructurada coherente | ✅ desglose por componente + total |
+| Llama a `calculate_estimate` | ✅ 1 llamada |
+| Valida el resultado (`validate_estimate`) | ✅ 1 llamada (última) |
+| Termina por sí solo | ✅ `iterations=4, stopped=completed` |
+| Estimación estructurada coherente | ✅ `AgentEstimate` vía `responses.parse`: componentes con horas + `cited_source_ids` + rationale, total ≈ 3570.8h, assumptions y confidence |
 | Traza con razonamiento + acción + observación por paso | ✅ formato `STEP N` (ver `trace_complex_gpt5.txt`) |
 
-**Comportamiento agéntico destacable** (STEP 5 de la traza): tras buscar SAP con
-filtro `sectors=['logistics']` y **observar** un resultado flojo, el agente razonó
-que no era satisfactorio y **re-buscó sin filtro de sector**, recuperando las
-referencias correctas. Esa capacidad de decidir sobre la marcha —según lo que
-devuelve cada observación— es justo lo que un pipeline fijo no tiene.
+**Comportamiento agéntico destacable** (en la traza): tras buscar SAP con filtro
+`sectors=['logistics']` y **observar** un resultado flojo, el agente razonó que no
+era satisfactorio y **re-buscó sin filtro de sector**, recuperando las referencias
+correctas. Esa capacidad de decidir sobre la marcha —según lo que devuelve cada
+observación— es justo lo que un pipeline fijo no tiene.
 
 ## Decisiones de diseño
 
@@ -65,6 +67,14 @@ devuelve cada observación— es justo lo que un pipeline fijo no tiene.
 - **`calculate_estimate` determinista**: mediana de las referencias (robusta a un
   outlier) + 15% de contingencia; sin referencias → 0h marcado `unbudgeted` (nunca
   inventa un número).
+- **`validate_estimate` (tercera tool, guardrail determinista)**: como último paso,
+  marca componentes sin referencia, horas fuera del rango plausible de sus
+  referencias, totales que no cuadran con la suma, o totales absurdos — para que el
+  agente se autocorrija antes de responder.
+- **Salida final estructurada con `responses.parse`**: tras el bucle de tools, una
+  llamada terminal valida la respuesta del modelo contra el Pydantic `AgentEstimate`
+  (componentes con `cited_source_ids` + rationale, total, assumptions, confidence),
+  en vez de devolver texto libre.
 
 ## Nota sobre el corpus y el `--stub`
 

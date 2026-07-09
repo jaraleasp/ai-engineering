@@ -9,6 +9,7 @@ from app.generation.agentic.agent_tools import (
     execute_tool,
     format_search_observation,
     search_budgets,
+    validate_estimate,
 )
 
 
@@ -96,3 +97,57 @@ async def test_execute_tool_rejects_unknown_tool():
 
     with pytest.raises(ValueError):
         await execute_tool("does_not_exist", {}, retriever=retriever)
+
+
+def test_validate_estimate_passes_a_clean_estimate():
+    result = validate_estimate(
+        {
+            "components": [{"name": "A", "estimated_hours": 115.0, "reference_amounts": [100, 120]}],
+            "total_hours": 115.0,
+        }
+    )
+    assert result["ok"] is True
+    assert result["issues"] == []
+    assert result["summary"] == "estimate passed all guardrails"
+
+
+def test_validate_estimate_flags_unbudgeted_and_out_of_range():
+    result = validate_estimate(
+        {
+            "components": [
+                {"name": "A", "estimated_hours": 100.0, "reference_amounts": []},  # unbudgeted
+                {"name": "B", "estimated_hours": 5000.0, "reference_amounts": [100, 120]},  # too high
+            ],
+            "total_hours": 5100.0,
+        }
+    )
+    assert result["ok"] is False
+    assert any("unbudgeted" in issue for issue in result["issues"])
+    assert any("outside the plausible range" in issue for issue in result["issues"])
+
+
+def test_validate_estimate_flags_total_mismatch():
+    result = validate_estimate(
+        {
+            "components": [{"name": "A", "estimated_hours": 115.0, "reference_amounts": [100, 120]}],
+            "total_hours": 999.0,
+        }
+    )
+    assert result["ok"] is False
+    assert any("does not match the sum" in issue for issue in result["issues"])
+
+
+async def test_execute_tool_dispatches_validate_estimate():
+    async def retriever(query, filters):
+        return []
+
+    result, observation = await execute_tool(
+        "validate_estimate",
+        {
+            "components": [{"name": "A", "estimated_hours": 115.0, "reference_amounts": [100, 120]}],
+            "total_hours": 115.0,
+        },
+        retriever=retriever,
+    )
+    assert result["ok"] is True
+    assert observation == result["summary"]

@@ -17,6 +17,10 @@ nothing to add.
 
 from __future__ import annotations
 
+from typing import Literal
+
+from pydantic import BaseModel, Field
+
 # Recover historical budgets for ONE component/requirement at a time. The
 # description steers the model to search per-component (many focused calls)
 # rather than one broad query — the behaviour the exercise grades.
@@ -125,5 +129,74 @@ CALCULATE_ESTIMATE_SCHEMA = {
     },
 }
 
+# Optional third tool: deterministic guardrails over the FINISHED estimate, so the
+# agent can catch its own mistakes (unbudgeted lines, out-of-range hours, totals
+# that do not add up) and fix them before answering. No LLM.
+VALIDATE_ESTIMATE_SCHEMA = {
+    "type": "function",
+    "name": "validate_estimate",
+    "description": (
+        "Sanity-check a finished estimate before returning it. Flags components with "
+        "no historical reference, components whose hours fall outside the plausible "
+        "range implied by their references, a total that does not match the sum of "
+        "the components, and non-positive or implausibly large totals. Call this as "
+        "the LAST tool step, once you have a full estimate, and fix anything it "
+        "reports before your final answer. Returns {ok, issues}."
+    ),
+    "strict": True,
+    "parameters": {
+        "type": "object",
+        "additionalProperties": False,
+        "required": ["components", "total_hours"],
+        "properties": {
+            "components": {
+                "type": "array",
+                "description": "The estimate's components with their final hours and references.",
+                "items": {
+                    "type": "object",
+                    "additionalProperties": False,
+                    "required": ["name", "estimated_hours", "reference_amounts"],
+                    "properties": {
+                        "name": {"type": "string"},
+                        "estimated_hours": {"type": "number"},
+                        "reference_amounts": {"type": "array", "items": {"type": "number"}},
+                    },
+                },
+            },
+            "total_hours": {
+                "type": "number",
+                "description": "The estimate's grand total in engineer-hours.",
+            },
+        },
+    },
+}
+
 # The list passed to ``client.responses.create(..., tools=AGENT_TOOLS)``.
-AGENT_TOOLS = [SEARCH_BUDGETS_SCHEMA, CALCULATE_ESTIMATE_SCHEMA]
+AGENT_TOOLS = [SEARCH_BUDGETS_SCHEMA, CALCULATE_ESTIMATE_SCHEMA, VALIDATE_ESTIMATE_SCHEMA]
+
+
+# --------------------------------------------------------------------------- #
+# Final structured estimate (filled by the loop's terminal ``responses.parse``) #
+# --------------------------------------------------------------------------- #
+# Deliberately LIGHT — no mandatory citations / coherence checks like the RAG
+# ``Estimate``. The agent grounds its numbers in what ``search_budgets`` returned;
+# ``responses.parse`` validates the model's final answer against this shape.
+class AgentComponent(BaseModel):
+    """One costed component in the agent's final estimate."""
+
+    name: str
+    estimated_hours: float = Field(ge=0)
+    cited_source_ids: list[int] = Field(
+        default_factory=list,
+        description="ids of the historical items (from search_budgets) that grounded this line.",
+    )
+    rationale: str = Field(description="Why this number, in one or two sentences.")
+
+
+class AgentEstimate(BaseModel):
+    """The agent's final structured estimate."""
+
+    components: list[AgentComponent]
+    total_hours: float = Field(ge=0)
+    assumptions: list[str] = Field(default_factory=list)
+    confidence: Literal["low", "medium", "high"]
