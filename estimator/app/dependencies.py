@@ -379,6 +379,95 @@ def get_parser_registry() -> ParserRegistry:
     return default_registry()
 
 
+# --- Session 12: hand-rolled estimation agent ------------------------------
+# The composition root is the ONLY place allowed to wire a `generation/rag`
+# capability into the `agentic` layer (siblings never import each other). So the
+# real `search_budgets` backend — embed → hybrid+rerank retrieve → map — is built
+# here and injected into the agent as a plain async callable.
+
+
+def _map_chunk_to_item(chunk) -> dict:
+    """Map a ``RetrievedChunk`` onto the canonical agent search-item shape.
+
+    Same shape as the offline stub (``reference_retrieval.py``) so the agent code
+    is identical whether it runs on the real pipeline or the stub.
+    """
+    return {
+        "id": chunk.id,
+        "content_preview": chunk.content[:300],
+        "sector": chunk.sector,
+        "budget_id": chunk.budget_id,
+        "estimated_hours": chunk.estimated_hours,
+        "distance": round(chunk.distance, 4),
+    }
+
+
+def build_budget_retriever(embedder, reranker):
+    """Build the async retrieval backend that ``search_budgets`` wraps.
+
+    Reuses the Session 9/10 hybrid + rerank pipeline unchanged: embed the query,
+    recall a wide candidate set, rerank, and map the surviving chunks onto the
+    agent item shape. Returns ``(query, filters) -> list[item]``.
+    """
+    import asyncio
+
+    from app.generation.rag.retrieval.collections import Collection
+    from app.generation.rag.retrieval.pipeline import retrieve
+
+    settings = get_settings()
+
+    async def retriever(query: str, filters: dict | None) -> list[dict]:
+        sectors = filters.get("sectors") if filters else None
+        embedding = await asyncio.to_thread(embedder.embed_one, query)
+        result = await retrieve(
+            query_embedding=embedding,
+            query_text=query,
+            search_mode="hybrid",
+            rerank=True,
+            top_k=settings.RETRIEVAL_TOP_K,
+            recall_k=settings.RETRIEVAL_RECALL_TOP_K,
+            rerank_top_n=settings.RERANK_TOP_N,
+            distance_threshold=settings.RETRIEVAL_DISTANCE_THRESHOLD,
+            rrf_k=settings.RRF_K,
+            collection=Collection.BUDGET,
+            sectors=sectors,
+            chunk_types=["budget_component"],
+            reranker=reranker,
+        )
+        return [_map_chunk_to_item(chunk) for chunk in result.chunks]
+
+    return retriever
+
+
+def get_estimation_agent(retriever=None, *, model=None, reasoning_effort=None):
+    """Build the Session 12 :class:`EstimationAgent`.
+
+    ``retriever`` is injectable: the run script passes the offline stub for
+    ``--stub``; when ``None`` we wire the real hybrid+rerank pipeline. ``model`` /
+    ``reasoning_effort`` override the settings defaults (the run script's
+    ``--model`` flag). Not a singleton — cheap to build and the retriever varies
+    per caller.
+    """
+    from app.generation.agentic.agent_loop import EstimationAgent
+
+    settings = get_settings()
+    client = get_openai_client()
+    if client is None:
+        raise RuntimeError("The estimation agent requires OPENAI_API_KEY.")
+    if retriever is None:
+        embedder = get_embedder()
+        if embedder is None:
+            raise RuntimeError("The estimation agent requires an embedder (OPENAI_API_KEY).")
+        retriever = build_budget_retriever(embedder, get_reranker())
+    return EstimationAgent(
+        client=client,
+        retriever=retriever,
+        model=model or settings.AGENT_MODEL,
+        reasoning_effort=reasoning_effort or settings.AGENT_REASONING_EFFORT,
+        max_iterations=settings.AGENT_MAX_ITERATIONS,
+    )
+
+
 @lru_cache
 def get_session_store() -> SessionStore:
     """In-memory store of conversational sessions. Singleton per worker.

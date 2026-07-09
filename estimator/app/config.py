@@ -172,6 +172,15 @@ class Settings(BaseSettings):
     QUERY_MAX_SUBQUERIES: int = 4
     ROUTER_MAX_TARGETS: int = 3
 
+    # --- Session 12 (hand-rolled estimation agent) -----------------------------
+    # The agent drives the OpenAI Responses API directly (client.responses.create),
+    # NOT LLMWrapper: we conduct the tool loop by hand to capture each step. gpt-5
+    # with medium reasoning effort is the exercise's specified model.
+    AGENT_MODEL: str = "gpt-5"
+    AGENT_REASONING_EFFORT: str = "medium"
+    # Loop safeguard: hard ceiling on tool-executing turns before we stop.
+    AGENT_MAX_ITERATIONS: int = 8
+
     # --- Session 10 live fields (per-task hours estimation) ---------------------
     # The structure-only generation leaves tasks without hours; each task is then
     # matched against the historical task corpus (chunk_type 'historical_task') and
